@@ -1,65 +1,113 @@
 package com.example.springredditclone.config;
 
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSet;
+import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
+import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.proc.SecurityContext;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.BeanIds;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
+import org.springframework.security.oauth2.server.resource.web.access.BearerTokenAccessDeniedHandler;
+
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
+
+    @Value("${jwt.public.key}")
+    RSAPublicKey publicKey;
+
+    @Value("${jwt.private.key}")
+    RSAPrivateKey privateKey;
+
+    @Autowired
+    private UserDetailsService userDetailsService;
+
     @Override
     public void configure(HttpSecurity httpSecurity) throws Exception {
-////        httpSecurity.csrf().disable()
-////                .authorizeRequests()
-////                .antMatchers(HttpMethod.OPTIONS, "/**", "/h2-console/**").permitAll()
-////                .anyRequest().authenticated()
-////                .and()
-////                .httpBasic();
-//
         httpSecurity.cors().and()
                 .csrf().disable()
                 .authorizeRequests(authorize -> authorize
                         // any request that doesn't match this pattern should be authenticated
                         .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .antMatchers("/api/auth/**").permitAll()
+                        .antMatchers("/api/auth/**")
+                        .permitAll()
+                        .antMatchers(HttpMethod.GET, "/api/subreddit")
+                        .permitAll()
+                        .antMatchers(HttpMethod.GET, "/api/posts/")
+                        .permitAll()
+                        .antMatchers(HttpMethod.GET, "/api/posts/**")
+                        .permitAll()
+                        .antMatchers("/v2/api-docs",
+                                "/configuration/ui",
+                                "/swagger-resources/**",
+                                "/configuration/security",
+                                "/swagger-ui.html",
+                                "/webjars/**")
+                        .permitAll()
                         .anyRequest()
-                        .authenticated());
+                        .authenticated())
+                //Enables JWT in our Application
+                .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt)
+                //Session Management -> STATELESS since we are using REST API's and JWTS are stateless by default
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(exceptions -> exceptions
+                        //Whenever a user provides with JWT Token authenticationEntryPoint() is invoked and JWT Token Authentication process is started
+                        .authenticationEntryPoint(new BearerTokenAuthenticationEntryPoint())
+                        //If the Token is not Valid bearerTokenAccessDeniedHandler is invoked
+                        .accessDeniedHandler(new BearerTokenAccessDeniedHandler()));
     }
 
-    //
-//        httpSecurity.httpBasic();
-//
-////        httpSecurity.cors().and()
-////                .csrf().disable()
-////                .authorizeHttpRequests(authorize -> authorize
-////                        .antMatchers("/api/auth/**")
-////                        .permitAll()
-////                        .antMatchers(HttpMethod.GET, "/api/subreddit")
-////                        .permitAll()
-////                        .antMatchers(HttpMethod.GET, "/api/posts/")
-////                        .permitAll()
-////                        .antMatchers(HttpMethod.GET, "/api/posts/**")
-////                        .permitAll()
-////                        .antMatchers("/v2/api-docs",
-////                                "/configuration/ui",
-////                                "/swagger-resources/**",
-////                                "/configuration/security",
-////                                "/swagger-ui.html",
-////                                "/webjars/**")
-////                        .permitAll()
-////                        .anyRequest()
-////                        .authenticated())
-////                .sessionManagement(session -> session.sessionCreationPolicy(
-////                        SessionCreationPolicy.STATELESS));
-//    }
-//
+    public void configureGlobal(AuthenticationManagerBuilder authenticationManagerBuilder) throws Exception {
+        authenticationManagerBuilder.userDetailsService(userDetailsService).passwordEncoder(passwordEncoder());
+    }
+
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    //Go into the code of Authentication manager.
+    //It's an interface, and whenever we auto-wire and interface spring will look for this bean and inject it.
+    @Bean(BeanIds.AUTHENTICATION_MANAGER)
+    @Override
+    public AuthenticationManager authenticationManagerBean() throws Exception {
+        return super.authenticationManagerBean();
+    }
+
+    @Bean
+    JwtDecoder jwtDecoder() {
+        return NimbusJwtDecoder.withPublicKey(this.publicKey).build();
+    }
+
+    @Bean
+    JwtEncoder jwtEncoder() {
+        //Creating a JSON Web Key by using Public and Private Keys
+        JWK jwk = new RSAKey.Builder(this.publicKey).privateKey(this.privateKey).build();
+        JWKSource<SecurityContext> jwks = new ImmutableJWKSet<>(new JWKSet(jwk));
+        //NimbusJwtEncoder will use this jsks to sign the user using public and private key
+        return new NimbusJwtEncoder(jwks);
     }
 }
