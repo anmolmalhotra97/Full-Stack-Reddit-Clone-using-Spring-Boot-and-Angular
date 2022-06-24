@@ -1,6 +1,7 @@
 package com.example.springredditclone.service;
 
 import com.example.springredditclone.dto.SubredditDto;
+import com.example.springredditclone.exceptions.SpringRedditException;
 import com.example.springredditclone.mapper.SubredditMapper;
 import com.example.springredditclone.model.Subreddit;
 import com.example.springredditclone.repository.SubredditRepository;
@@ -41,4 +42,9 @@ public class SubredditService {
     }
 
 
+    public SubredditDto getSubredditById(Long id) {
+        Subreddit subreddit = subredditRepository.findById(id)
+                .orElseThrow(() -> new SpringRedditException("No Subreddit found with ID: " + id));
+        return subredditMapper.mapSubredditToDto(subreddit);
+    }
 }

@@ -19,6 +19,8 @@ public interface SubredditMapper {
         return numberOfPosts.size();
     }
 
+    //No Need to map posts between DTO and Model since we are saving Subreddit and at the time of creation
+    //of subreddit the posts will be empty
     @InheritInverseConfiguration
     @Mapping(target = "posts", ignore = true)
     Subreddit mapDtoToSubreddit(SubredditDto subredditDto);
