@@ -27,7 +27,7 @@ public class JwtProvider {
         return generateTokenWithUserName(principal.getUsername());
     }
 
-    private String generateTokenWithUserName(String username) {
+    public String generateTokenWithUserName(String username) {
         //JwtClaimsSet is nothing but the payload (Data) Part that we see on the jwt.io website
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("self")
