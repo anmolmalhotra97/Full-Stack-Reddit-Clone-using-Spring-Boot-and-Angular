@@ -47,11 +47,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     public void configure(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity.cors().and()
+        httpSecurity
                 .csrf().disable()
                 .authorizeRequests(authorize -> authorize
                         // any request that doesn't match this pattern should be authenticated
-                        .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .antMatchers(HttpMethod.OPTIONS, "/**")
+                        .permitAll()
                         .antMatchers("/api/auth/**")
                         .permitAll()
                         .antMatchers(HttpMethod.GET, "/api/subreddit")
@@ -107,7 +108,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
         //Creating a JSON Web Key by using Public and Private Keys
         JWK jwk = new RSAKey.Builder(this.publicKey).privateKey(this.privateKey).build();
         JWKSource<SecurityContext> jwks = new ImmutableJWKSet<>(new JWKSet(jwk));
-        //NimbusJwtEncoder will use this jsks to sign the user using public and private key
+        //NimbusJwtEncoder will use this jwks to sign the user using public and private key
         return new NimbusJwtEncoder(jwks);
     }
 }
