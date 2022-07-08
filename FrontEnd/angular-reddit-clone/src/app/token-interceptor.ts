@@ -17,19 +17,20 @@ export class TokenInterceptor implements HttpInterceptor {
     refreshTokenSubject: BehaviorSubject<any> = new BehaviorSubject(null);
 
     constructor(public authService: AuthService) {
-
     }
 
 
     intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-        const jwtToken = this.authService.getJwtToken();
+
         // if token is Valid add it to the request Header
-        if (jwtToken) {
-            this.addToken(request, jwtToken);
+        if (this.authService.getJwtToken()) {
+            request = this.addToken(request, this.authService.getJwtToken());
         }
+
         // if we receive and error response we need to prepare our client to make a refresh token call to the backend
         return next.handle(request).pipe(catchError(error => {
-            if (error instanceof HttpErrorResponse && error.status === 403) {
+            if (error instanceof HttpErrorResponse
+                && error.status === 403) {
                 return this.handleAuthErrors(request, next);
             } else {
                 return throwError(error);
@@ -48,7 +49,6 @@ export class TokenInterceptor implements HttpInterceptor {
                 switchMap((refreshTokenResponse: LoginResponse) => {
                     this.isTokenRefreshing = false;
                     this.refreshTokenSubject.next(refreshTokenResponse.authenticationToken);
-
                     return next.handle(this.addToken(request, refreshTokenResponse.authenticationToken));
                 })
             )
@@ -63,9 +63,11 @@ export class TokenInterceptor implements HttpInterceptor {
         }
     }
 
-    addToken(request: HttpRequest<any>, jwtToken: any) {
-        return request.clone({
-            headers: request.headers.set('Authorization', 'Bearer ' + jwtToken)
+    addToken(req: HttpRequest<any>, jwtToken: string) {
+        return req.clone({
+            setHeaders: {
+                Authorization: 'Bearer ' + jwtToken
+            }
         });
     }
 
