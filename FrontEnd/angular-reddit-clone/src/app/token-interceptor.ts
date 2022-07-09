@@ -22,24 +22,26 @@ export class TokenInterceptor implements HttpInterceptor {
 
     intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
 
+
         if (request.url.indexOf('refresh') !== -1 || request.url.indexOf('login') !== -1) {
             return next.handle(request);
         }
 
         // if token is Valid add it to the request Header
-        if (this.authService.getJwtToken()) {
-            request = this.addToken(request, this.authService.getJwtToken());
-        }
+        const jwtToken = this.authService.getJwtToken();
 
-        // if we receive and error response we need to prepare our client to make a refresh token call to the backend
-        return next.handle(request).pipe(catchError(error => {
-            if (error instanceof HttpErrorResponse
-                && error.status === 403) {
-                return this.handleAuthErrors(request, next);
-            } else {
-                return throwError(error);
-            }
-        }));
+        if (jwtToken) {
+            // if we receive and error response we need to prepare our client to make a refresh token call to the backend
+            return next.handle(this.addToken(request, jwtToken)).pipe(catchError(error => {
+                if (error instanceof HttpErrorResponse
+                    && (error.status === 401 || error.status === 403)) {
+                    return this.handleAuthErrors(request, next);
+                } else {
+                    return throwError(error);
+                }
+            }));
+        }
+        return next.handle(request);
     }
 
     // When we are making this call to refresh token

@@ -24,6 +24,8 @@ import { ListSubredditComponent } from './components/subreddit/list-subreddit/li
 import { EditorModule } from '@tinymce/tinymce-angular';
 import { TokenInterceptor } from './token-interceptor';
 import { ViewPostComponent } from './components/post/view-post/view-post.component';
+import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
+import { UserProfileComponent } from './components/auth/user-profile/user-profile.component';
 
 @NgModule({
   declarations: [
@@ -39,7 +41,8 @@ import { ViewPostComponent } from './components/post/view-post/view-post.compone
     CreateSubredditComponent,
     CreatePostComponent,
     ListSubredditComponent,
-    ViewPostComponent
+    ViewPostComponent,
+    UserProfileComponent
   ],
   imports: [
     BrowserModule,
@@ -51,7 +54,8 @@ import { ViewPostComponent } from './components/post/view-post/view-post.compone
     ToastrModule.forRoot(),
     CommonModule,
     FontAwesomeModule,
-    EditorModule
+    EditorModule,
+    NgbModule,
   ],
   providers: [
     {

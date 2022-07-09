@@ -18,4 +18,7 @@ export class CommentService {
     return this.httpClient.post<any>('http://localhost:8080/api/comments/', commentPayload);
   }
 
+  getAllCommentsByUser(name: string) {
+    return this.httpClient.get<CommentsPayload[]>('http://localhost:8080/api/comments/by-user/' + name);
+  }
 }
